@@ -1,0 +1,31 @@
+name: Build Kitty
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip project
+        run: unzip -q Kitty-project.zip -d proj
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Make signing key
+        working-directory: proj
+        run: |
+          mkdir -p app/src/main/assets
+          keytool -genkeypair -J-Dkeystore.pkcs12.legacy -alias kitty -keyalg RSA -keysize 2048 -validity 36500 -storetype PKCS12 -keystore app/src/main/assets/kitty.p12 -storepass kittykey -keypass kittykey -dname "CN=Kitty"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build
+        working-directory: proj
+        run: gradle assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Kitty-apk
+          path: proj/app/build/outputs/apk/debug/app-debug.apk
